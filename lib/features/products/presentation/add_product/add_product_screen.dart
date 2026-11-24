@@ -10,31 +10,6 @@ import 'package:trezuno/core/theme/app_colors.dart';
 import 'package:trezuno/core/theme/app_typography.dart';
 
 /// Add Product Screen for Trezuno application.
-///
-/// Allows users to add products using the following fields:
-///
-/// Required:
-/// - Product Name
-/// - Purchase Date
-/// - Warranty Duration
-///
-/// Optional:
-/// - Product Image
-/// - Product Category
-/// - Store Name
-/// - Receipt Number
-/// - Product Serial Number
-/// - Product Description
-/// - Receipt Image
-/// - Additional Notes
-///
-/// Features:
-/// - Date picker
-/// - Warranty duration selector
-/// - Automatic expiration date calculation
-/// - Image attachment through the iOS system photo picker or file picker
-/// - Form validation
-/// - Save and Cancel actions
 class AddProductScreen extends StatefulWidget {
   static const routeName = '/products/add';
 
@@ -59,6 +34,9 @@ class _AddProductScreenState extends State<AddProductScreen>
   final _serialNumberController = TextEditingController();
   final _receiptNumberController = TextEditingController();
   final _notesController = TextEditingController();
+
+  // Animation controller
+  late AnimationController _animationController;
 
   // State values
   String? _selectedCategory;
@@ -88,9 +66,14 @@ class _AddProductScreenState extends State<AddProductScreen>
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
+
     // Initialize with existing product data if provided
     if (widget.existingProduct != null) {
-      final product = widget.existingProduct;
+      final product = widget.existingProduct!;
       _productNameController.text = product.productName;
       _serialNumberController.text = product.serialNumber ?? '';
       _receiptNumberController.text = product.receiptImage != null ? 'Receipt attached' : '';
@@ -113,6 +96,7 @@ class _AddProductScreenState extends State<AddProductScreen>
     _serialNumberController.dispose();
     _receiptNumberController.dispose();
     _notesController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -131,26 +115,23 @@ class _AddProductScreenState extends State<AddProductScreen>
         id: widget.existingProduct?.id,
         productName: _productNameController.text.trim(),
         category: _selectedCategory,
-        purchaseDate: _selectedPurchaseDate!,
+        purchaseDate: _selectedPurchaseDate ?? DateTime.now(),
         warrantyDurationMonths: _selectedWarrantyMonths,
         notes: _notesController.text.trim().isNotEmpty
             ? _notesController.text.trim()
             : null,
-        storeName: null, // Could be added as a field if needed
+        storeName: null,
         serialNumber: _serialNumberController.text.trim().isNotEmpty
             ? _serialNumberController.text.trim()
             : null,
-        description: null, // Could be added from notes if needed
+        description: null,
         receiptImage: _receiptImageFile?.path,
         productImage: _productImageFile?.path,
       );
 
-      // In a full implementation, this would save to the database
-      // For now, navigate back
       if (!mounted) return;
       context.go('/products');
     } catch (e) {
-      // Error handling
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -192,39 +173,40 @@ class _AddProductScreenState extends State<AddProductScreen>
 
   /// Show warranty duration options bottom sheet
   Future<void> _showWarrantyDurationBottomSheet() async {
-    final result = await showModalBottomSheet<
-        int>.context(context: context, isScrollControlled: true) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Warranty Duration',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF182635),
+    final result = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Warranty Duration',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF182635),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            ..._warrantyOptions.map((months) => _WarrantyOption(
-              months: months,
-              isSelected: _selectedWarrantyMonths == months,
-              onTap: () => Navigator.pop(context, months),
-            )),
-            const SizedBox(height: 24),
-            // Custom option
-            TextButton(
-              onPressed: () => Navigator.pop(context,
-                  _warrantyOptions.last + 1), // One month beyond last option
-              child: const Text('Custom duration'),
-            ),
-          ],
-        ),
-      );
-    };
+              const SizedBox(height: 24),
+              ..._warrantyOptions.map((months) => _WarrantyOption(
+                months: months,
+                isSelected: _selectedWarrantyMonths == months,
+                onTap: () => Navigator.pop(context, months),
+              )),
+              const SizedBox(height: 24),
+              TextButton(
+                onPressed: () => Navigator.pop(context, _warrantyOptions.last + 1),
+                child: const Text('Custom duration'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
 
     if (result != null && mounted) {
       setState(() {
@@ -252,47 +234,22 @@ class _AddProductScreenState extends State<AddProductScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
                     _buildHeader(isEditing),
-
                     const SizedBox(height: 32),
-
-                    // Product name field
                     _buildProductNameField(),
-
                     const SizedBox(height: 20),
-
-                    // Category dropdown
                     _buildCategoryDropdown(),
-
                     const SizedBox(height: 20),
-
-                    // Purchase date field
                     _buildPurchaseDateField(),
-
                     const SizedBox(height: 20),
-
-                    // Warranty duration field
                     _buildWarrantyDurationField(),
-
                     const SizedBox(height: 20),
-
-                    // Serial number field
                     _buildSerialNumberField(),
-
                     const SizedBox(height: 20),
-
-                    // Receipt number field
                     _buildReceiptNumberField(),
-
                     const SizedBox(height: 20),
-
-                    // Notes field
                     _buildNotesField(),
-
-                    const Spacer(),
-
-                    // Save/Cancel buttons
+                    const SizedBox(height: 32),
                     _buildSaveAndCancelButtons(isEditing),
                   ],
                 ),
@@ -304,7 +261,6 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
-  /// Build the app bar
   AppBar _buildAppBar(BuildContext context, bool isEditing) {
     return AppBar(
       title: Text(
@@ -318,34 +274,23 @@ class _AddProductScreenState extends State<AddProductScreen>
         onPressed: () => context.go('/products'),
       ),
       actions: [
-        // Done/cancel buttons
-        if (isEditing)
-          TextButton(
-            onPressed: () => context.go('/products'),
-            child: const Text('Cancel'),
-          )
-        else
-          TextButton(
-            onPressed: () => context.go('/products'),
-            child: const Text('Cancel'),
-          ),
+        TextButton(
+          onPressed: () => context.go('/products'),
+          child: const Text('Cancel'),
+        ),
       ],
     );
   }
 
-  /// Build the header section with product image
   Widget _buildHeader(bool isEditing) {
     return Column(
       children: [
-        // Product image preview
         _buildProductImagePreview(),
         const SizedBox(height: 16),
-
-        // Add product image button
         ElevatedButton.icon(
           onPressed: _pickProductImage,
           icon: const Icon(Icons.photo_library),
-          label: const Text(
+          label: Text(
             _productImageFile == null ? 'Add Product Image' : 'Change Image',
           ),
           style: ElevatedButton.styleFrom(
@@ -356,7 +301,6 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
-  /// Build product image preview
   Widget _buildProductImagePreview() {
     if (_productImageFile != null) {
       return ClipRRect(
@@ -370,7 +314,6 @@ class _AddProductScreenState extends State<AddProductScreen>
       );
     }
 
-    // Placeholder when no image
     return Container(
       height: 150,
       width: double.infinity,
@@ -378,8 +321,8 @@ class _AddProductScreenState extends State<AddProductScreen>
         color: const Color(0xFFDEE4E8),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Center(
-        child: const Text(
+      child: const Center(
+        child: Text(
           'No image selected',
           style: TextStyle(
             color: Color(0xFF78909C),
@@ -390,18 +333,17 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
-  /// Build product name field
   Widget _buildProductNameField() {
     return TextFormField(
       controller: _productNameController,
       decoration: const InputDecoration(
         labelText: 'Product Name*',
         hintText: 'e.g., iPhone 15 Pro',
-        prefixIcon: Icon(Icons.product),
+        prefixIcon: Icon(Icons.inventory_2),
         filled: true,
         fillColor: Color(0xFFF5F7FA),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide.none,
         ),
         contentPadding:
@@ -419,7 +361,6 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
-  /// Build category dropdown
   Widget _buildCategoryDropdown() {
     return DropdownButtonFormField<String>(
       value: _selectedCategory,
@@ -430,7 +371,7 @@ class _AddProductScreenState extends State<AddProductScreen>
         filled: true,
         fillColor: Color(0xFFF5F7FA),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide.none,
         ),
         contentPadding:
@@ -456,15 +397,17 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
-  /// Build purchase date field with date picker
   Widget _buildPurchaseDateField() {
     return GestureDetector(
       onTap: _selectPurchaseDate,
-      // Override the tap to show date picker
       child: AbsorbPointer(
-        // This allows the text field to still be focused but shows the date
         child: TextFormField(
           readOnly: true,
+          controller: TextEditingController(
+            text: _selectedPurchaseDate == null
+                ? ''
+                : '${_selectedPurchaseDate!.year}-${_selectedPurchaseDate!.month.toString().padLeft(2, '0')}-${_selectedPurchaseDate!.day.toString().padLeft(2, '0')}',
+          ),
           decoration: const InputDecoration(
             labelText: 'Purchase Date*',
             hintText: 'Select purchase date',
@@ -472,18 +415,23 @@ class _AddProductScreenState extends State<AddProductScreen>
             filled: true,
             fillColor: Color(0xFFF5F7FA),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
               borderSide: BorderSide.none,
             ),
             contentPadding:
                 EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
+          validator: (value) {
+            if (_selectedPurchaseDate == null) {
+              return 'Please select a purchase date';
+            }
+            return null;
+          },
         ),
       ),
     );
   }
 
-  /// Select purchase date using date picker
   Future<void> _selectPurchaseDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -498,13 +446,15 @@ class _AddProductScreenState extends State<AddProductScreen>
     }
   }
 
-  /// Build warranty duration field
   Widget _buildWarrantyDurationField() {
     return GestureDetector(
       onTap: _showWarrantyDurationBottomSheet,
       child: AbsorbPointer(
         child: TextFormField(
           readOnly: true,
+          controller: TextEditingController(
+            text: '$_selectedWarrantyMonths months',
+          ),
           decoration: const InputDecoration(
             labelText: 'Warranty Duration*',
             hintText: 'e.g., 12 months',
@@ -512,7 +462,7 @@ class _AddProductScreenState extends State<AddProductScreen>
             filled: true,
             fillColor: Color(0xFFF5F7FA),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
               borderSide: BorderSide.none,
             ),
             contentPadding:
@@ -523,27 +473,25 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
-  /// Build serial number field
   Widget _buildSerialNumberField() {
     return TextFormField(
       controller: _serialNumberController,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Serial Number',
         hintText: 'e.g., SN123456789',
-        prefixIcon: const Icon(Icons.numbers),
+        prefixIcon: Icon(Icons.numbers),
         filled: true,
-        fillColor: const Color(0xFFF5F7FA),
+        fillColor: Color(0xFFF5F7FA),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide.none,
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
 
-  /// Build receipt number field
   Widget _buildReceiptNumberField() {
     return TextFormField(
       controller: _receiptNumberController,
@@ -553,32 +501,35 @@ class _AddProductScreenState extends State<AddProductScreen>
         prefixIcon: const Icon(Icons.receipt),
         filled: true,
         fillColor: const Color(0xFFF5F7FA),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide.none,
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.camera_alt),
+          onPressed: _pickReceiptImage,
+        ),
       ),
     );
   }
 
-  /// Build notes field
   Widget _buildNotesField() {
     return TextFormField(
       controller: _notesController,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Additional Notes',
         hintText: 'Any additional information about the product',
-        prefixIcon: const Icon(Icons.note),
+        prefixIcon: Icon(Icons.note),
         filled: true,
-        fillColor: const Color(0xFFF5F7FA),
+        fillColor: Color(0xFFF5F7FA),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide.none,
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         isDense: true,
         alignLabelWithHint: true,
       ),
@@ -586,11 +537,9 @@ class _AddProductScreenState extends State<AddProductScreen>
     );
   }
 
-  /// Build save and cancel buttons
   Widget _buildSaveAndCancelButtons(bool isEditing) {
     return Row(
       children: [
-        // Cancel button
         Expanded(
           child: TextButton(
             onPressed: () => context.go('/products'),
@@ -598,7 +547,6 @@ class _AddProductScreenState extends State<AddProductScreen>
           ),
         ),
         const SizedBox(width: 12),
-        // Save button
         Expanded(
           child: ElevatedButton(
             onPressed: _isSaving ? null : _saveProduct,
@@ -625,7 +573,6 @@ class _AddProductScreenState extends State<AddProductScreen>
   }
 }
 
-/// Warranty option bottom sheet item
 class _WarrantyOption extends StatelessWidget {
   final int months;
   final bool isSelected;

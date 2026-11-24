@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:trezuno/core/router/app_router.dart';
 import 'package:trezuno/core/theme/app_colors.dart';
@@ -8,24 +9,13 @@ import 'package:trezuno/core/theme/app_typography.dart';
 /// Notifications Screen for Trezuno application.
 ///
 /// Display scheduled and relevant warranty reminders.
-///
-/// Reminder options:
-/// - 30 days before expiration
-/// - 14 days before expiration
-/// - 7 days before expiration
-/// - 1 day before expiration
-///
-/// Allows users to enable or disable individual reminders.
-/// Uses local notifications only.
-/// Does not use push notifications or remote notification servers.
-/// Handles notification permissions gracefully.
 class NotificationsScreen extends StatefulWidget {
   static const routeName = '/notifications';
 
   const NotificationsScreen({super.key});
 
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState;
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen>
@@ -82,7 +72,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
             // Page content
             Expanded(
-              child: _buildPageContent(),
+              child: _currentPage.build(context, _onProceed),
             ),
 
             // Navigation buttons
@@ -104,7 +94,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: _currentPage.index >= index
+            color: _currentPage.pageIndex >= index
                 ? const Color(0xFF315C81)
                 : const Color(0xFFDEE4E8),
             shape: BoxShape.circle,
@@ -114,58 +104,50 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     );
   }
 
-  /// Build the current page content based on _currentPage
-  Widget _buildPageContent() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.3),
-          end: const Offset(0, 0),
-        ).animate(_animationController),
-        child: _NotificationPageWidget(
-          page: _currentPage,
-          onProceed: _onProceed,
-        ),
-      ),
-    );
-  }
-
   /// Build the navigation buttons
   Widget _buildNavigationButtons(bool isLastPage) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        TextButton(
-          onPressed: () => context.go('/settings'),
-          child: const Text('Skip'),
-        ),
-        const SizedBox(width: 8),
-        if (!isLastPage)
-          ElevatedButton(
-            onPressed: () {
-              _animationController.forward();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF315C81),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(80, 36),
-            ),
-            child: const Text('Next'),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          TextButton(
+            onPressed: () => context.go('/settings'),
+            child: const Text('Skip'),
           ),
-        else ...[
           const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: _onProceed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF315C81),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 56),
+          if (!isLastPage)
+            ElevatedButton(
+              onPressed: () {
+                _animationController.forward();
+                setState(() {
+                  final nextIndex = _currentPage.pageIndex + 1;
+                  if (nextIndex < _NotificationPage.values.length) {
+                    _currentPage = _NotificationPage.values[nextIndex];
+                  }
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF315C81),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(80, 36),
+              ),
+              child: const Text('Next'),
+            )
+          else
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _onProceed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF315C81),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 56),
+                ),
+                child: const Text('Get Started'),
+              ),
             ),
-            child: const Text('Get Started'),
-          ),
         ],
-      ],
+      ),
     );
   }
 }
@@ -177,7 +159,7 @@ enum _NotificationPage {
   page3,
   page4;
 
-  int get index {
+  int get pageIndex {
     return switch (this) {
       _NotificationPage.page1 => 0,
       _NotificationPage.page2 => 1,
@@ -276,7 +258,7 @@ class _NotificationPage1 extends StatelessWidget {
   Widget _buildFeatureHighlight(String title, String description) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
@@ -328,7 +310,7 @@ class _NotificationPage2 extends StatelessWidget {
           const SizedBox(height: 32),
           // Reminder option cards
           ..._buildReminderOptions(),
-          const Spacer(),
+          const SizedBox(height: 24),
           // Continue button
           ElevatedButton(
             onPressed: onProceed,
@@ -357,10 +339,8 @@ class _NotificationPage2 extends StatelessWidget {
       index: index,
       interval: options[index]['interval']!,
       description: options[index]['description']!,
-      isSelected: _currentPage.index >= index + 1, // Simplified selection
-      onTap: () {
-        // Handle selection - in full impl would update state
-      },
+      isSelected: index <= 1,
+      onTap: () {},
     ));
   }
 }
@@ -390,25 +370,23 @@ class _ReminderOption extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? Color(0xFF315C81).withOpacity(0.1)
-              : Color(0xFFF5F7FA),
+              ? const Color(0xFF315C81).withOpacity(0.1)
+              : const Color(0xFFF5F7FA),
           borderRadius: BorderRadius.circular(12),
-          border: BorderSide(
-            color: isSelected ? Color(0xFF315C81) : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? const Color(0xFF315C81) : Colors.transparent,
             width: 2,
           ),
         ),
         child: Row(
           children: [
-            // Checkmark if selected
             if (isSelected)
               const Icon(
                 Icons.check_circle,
                 color: Color(0xFF42A886),
                 size: 20,
               ),
-            const Spacer(),
-            // Text
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,7 +394,7 @@ class _ReminderOption extends StatelessWidget {
                   Text(
                     interval,
                     style: TextStyle(
-                      color: isSelected ? Color(0xFF315C81) : Color(0xFF182635),
+                      color: isSelected ? const Color(0xFF315C81) : const Color(0xFF182635),
                       fontWeight: FontWeight.w500,
                       fontSize: 16,
                     ),
@@ -425,20 +403,13 @@ class _ReminderOption extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      color: isSelected ? Color(0xFF8291A0) : Color(0xFF6E91AE),
+                      color: isSelected ? const Color(0xFF8291A0) : const Color(0xFF6E91AE),
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            // Arrow indicator
-            if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: Color(0xFF42A886),
-                size: 20,
-              ),
           ],
         ),
       ),
@@ -471,13 +442,10 @@ class _NotificationPage3 extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          // Permission status
           _buildPermissionStatus(context),
           const SizedBox(height: 32),
-          // Options
           _buildPermissionOptions(context),
-          const Spacer(),
-          // Continue button
+          const SizedBox(height: 24),
           ElevatedButton(
             onPressed: onProceed,
             style: ElevatedButton.styleFrom(
@@ -497,9 +465,9 @@ class _NotificationPage3 extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Color(0xFFF5F7FA),
+        color: const Color(0xFFF5F7FA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Color(0xFFDEE4E8)),
+        border: Border.all(color: const Color(0xFFDEE4E8)),
       ),
       child: Column(
         children: [
@@ -519,14 +487,14 @@ class _NotificationPage3 extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             'Enable notifications to receive warranty reminders.',
             style: TextStyle(
               fontSize: 12,
               color: Color(0xFF6E91AE),
               height: 1.5,
-              textAlign: TextAlign.center,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -541,18 +509,14 @@ class _NotificationPage3 extends StatelessWidget {
           title: 'Enable All Reminders',
           description: 'Receive all notification intervals',
           isActive: false,
-          onTap: () {
-            // In full implementation, would request notification permission
-          },
+          onTap: () {},
         ),
         const SizedBox(height: 12),
         _PermissionOption(
           title: 'Disable All Reminders',
           description: 'No warranty expiration notifications',
           isActive: true,
-          onTap: () {
-            // Handle disable all
-          },
+          onTap: () {},
         ),
       ],
     );
@@ -580,10 +544,10 @@ class _PermissionOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isActive ? Color(0xFFE8F5F0) : Color(0xFFF5F7FA),
+          color: isActive ? const Color(0xFFE8F5F0) : const Color(0xFFF5F7FA),
           borderRadius: BorderRadius.circular(12),
-          border: BorderSide(
-            color: isActive ? Color(0xFF42A886) : Colors.transparent,
+          border: Border.all(
+            color: isActive ? const Color(0xFF42A886) : Colors.transparent,
             width: 1,
           ),
         ),
@@ -591,7 +555,7 @@ class _PermissionOption extends StatelessWidget {
           children: [
             Icon(
               isActive ? Icons.notifications_active : Icons.notifications_off,
-              color: isActive ? Color(0xFF42A886) : Color(0xFF8291A0),
+              color: isActive ? const Color(0xFF42A886) : const Color(0xFF8291A0),
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -601,8 +565,8 @@ class _PermissionOption extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      color: isActive ? Color(0xFF182635) : Color(0xFF182635),
+                    style: const TextStyle(
+                      color: Color(0xFF182635),
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
                     ),
@@ -611,7 +575,7 @@ class _PermissionOption extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      color: isActive ? Color(0xFF6E91A0) : Color(0xFF8291A0),
+                      color: isActive ? const Color(0xFF6E91A0) : const Color(0xFF8291A0),
                       fontSize: 12,
                       height: 1.3,
                     ),
@@ -641,47 +605,32 @@ class _NotificationPage4 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Summary
-        _buildSummaryItem(
-          'Total Reminder Intervals',
-          '4 options available',
-        ),
-        _buildSummaryItem(
-          'Notification Type',
-          'Local only - no remote servers',
-        ),
-        _buildSummaryItem(
-          'Data Privacy',
-          'All data stays on your device',
-        ),
-        const Spacer(),
-        // Get started button
-        ElevatedButton(
-          onPressed: onProceed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF315C81),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 56),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildSummaryItem(
+            'Total Reminder Intervals',
+            '4 options available',
           ),
-          child: const Text('Get Started'),
-        ),
-        const SizedBox(height: 16),
-        // Skip
-        TextButton(
-          onPressed: () => context.go('/settings'),
-          child: const Text('Skip'),
-        ),
-      ],
+          _buildSummaryItem(
+            'Notification Type',
+            'Local only - no remote servers',
+          ),
+          _buildSummaryItem(
+            'Data Privacy',
+            'All data stays on your device',
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSummaryItem(String title, String description) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(

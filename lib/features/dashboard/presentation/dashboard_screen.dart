@@ -463,7 +463,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blur: 5,
+            blurRadius: 5,
             offset: const Offset(0, 2),
           ),
         ],
@@ -534,7 +534,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blur: 10,
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],

@@ -1,24 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../app/router/app_router.dart';
+import 'package:trezuno/core/router/app_router.dart';
 
 /// Onboarding Screen for Trezuno application.
 /// 
 /// This screen introduces users to the application's purpose,
 /// highlights warranty tracking features, explains local storage and privacy,
 /// and provides an optional notification introduction.
-/// 
-/// Key requirements from the prompt:
-/// - Premium introductory screen
-/// - Explain the application's purpose
-/// - Highlight warranty tracking
-/// - Explain local storage and privacy
-/// - Optional notification introduction (not requested immediately)
-/// - Skip button
-/// - Get Started button
-/// - Do not request notification permission immediately on launch
-/// - Only request it after explaining its purpose and when the user enables reminders
 class OnboardingScreen extends StatefulWidget {
   static const routeName = '/onboarding';
 
@@ -31,7 +21,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   late final PageController _pageController;
-  late final _OnboardingPage _currentPage;
+  late _OnboardingPage _currentPage;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -81,9 +71,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   /// Called when user enables notifications reminder
   Future<void> _onEnableNotifications() async {
-    _notificationsExplained = true;
-    setState(() {});
-    // Navigation will happen after user confirms
+    setState(() {
+      _notificationsExplained = true;
+    });
     if (!mounted) return;
     context.go('/dashboard');
   }
@@ -102,7 +92,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
             // Page content
             Expanded(
-              child: _buildPageContent(),
+              child: _currentPage.build(context, _onSkip, _onProceed, _notificationsExplained, _onEnableNotifications),
             ),
 
             // Navigation buttons (only on last page)
@@ -129,31 +119,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: _currentPage.index >= index
+            color: _currentPage.pageIndex >= index
                 ? const Color(0xFF315C81)
                 : const Color(0xFFDEE4E8),
             shape: BoxShape.circle,
           ),
         );
       }),
-    );
-  }
-
-  /// Builds the current page content based on _currentPage
-  Widget _buildPageContent() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.3),
-          end: const Offset(0, 0),
-        ).animate(_animationController),
-        child: _CurrentPageWidget(
-          page: _currentPage,
-          onSkip: _onSkip,
-          onProceed: _onProceed,
-        ),
-      ),
     );
   }
 
@@ -176,6 +148,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ElevatedButton(
           onPressed: () {
             _animationController.forward();
+            setState(() {
+              final nextIndex = _currentPage.pageIndex + 1;
+              if (nextIndex < _OnboardingPage.values.length) {
+                _currentPage = _OnboardingPage.values[nextIndex];
+              }
+            });
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF315C81),
@@ -193,28 +171,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Summary of what users will get
-        _buildFeatureCard(
-          icon: Icons.calendar_today,
-          title: 'Warranty Tracking',
-          description:
-              'Track all your product warranties with automatic expiration date calculations.',
-        ),
-        const SizedBox(height: 12),
-        _buildFeatureCard(
-          icon: Icons.security,
-          title: 'Local Privacy',
-          description:
-              'All your data stays on your device. No cloud, no tracking, no third-party services.',
-        ),
-        const SizedBox(height: 12),
-        _buildFeatureCard(
-          icon: Icons.notifications_none,
-          title: 'Optional Reminders',
-          description:
-              'Receive notifications before your warranties expire. You can enable this later in Settings.',
-        ),
-        const SizedBox(height: 40),
         // Get Started button
         ElevatedButton(
           onPressed: _onProceed,
@@ -234,55 +190,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
     );
   }
-
-  /// Builds a feature card showing onboarding highlights
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE9B86E).withOpacity(0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: const Color(0xFFE9B86E),
-            size: 24,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF182635),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF8291A0),
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 /// Internal enum for onboarding pages
@@ -293,7 +200,7 @@ enum _OnboardingPage {
   page4,
   page5;
 
-  int get index {
+  int get pageIndex {
     return switch (this) {
       _OnboardingPage.page1 => 0,
       _OnboardingPage.page2 => 1,
@@ -304,7 +211,7 @@ enum _OnboardingPage {
   }
 
   /// Builds the widget for each onboarding page
-  Widget build(BuildContext context, VoidCallback onSkip, VoidCallback onProceed) {
+  Widget build(BuildContext context, VoidCallback onSkip, VoidCallback onProceed, bool notificationsExplained, VoidCallback onEnableNotifications) {
     switch (this) {
       case _OnboardingPage.page1:
         return _OnboardingPage1(onSkip: onSkip, onProceed: onProceed);
@@ -313,22 +220,18 @@ enum _OnboardingPage {
       case _OnboardingPage.page3:
         return _OnboardingPage3(onSkip: onSkip, onProceed: onProceed);
       case _OnboardingPage.page4:
-        return _OnboardingPage4(onSkip: onSkip, onProceed: onProceed);
+        return _OnboardingPage4(
+          onSkip: onSkip,
+          onProceed: onProceed,
+          notificationsExplained: notificationsExplained,
+          onEnableNotifications: onEnableNotifications,
+        );
       case _OnboardingPage.page5:
         return _OnboardingPage5(
           onSkip: onSkip,
           onProceed: onProceed,
-          notificationsExplained: _notificationsExplained,
-          onEnableNotifications: () {
-            _notificationsExplained = true;
-            setState(() {});
-            // Navigate after short delay
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (mounted) {
-                context.go('/dashboard');
-              }
-            });
-          },
+          notificationsExplained: notificationsExplained,
+          onEnableNotifications: onEnableNotifications,
         );
     }
   }
@@ -360,7 +263,7 @@ class _OnboardingPage1 extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.production_parts,
+              Icons.inventory_2,
               size: 60,
               color: Color(0xFFE9B86E),
             ),
@@ -412,7 +315,7 @@ class _OnboardingPage1 extends StatelessWidget {
   Widget _buildFeaturePreview(String title, String description) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
@@ -466,8 +369,8 @@ class _OnboardingPage2 extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF315C81),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF315C81),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -489,10 +392,10 @@ class _OnboardingPage2 extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 // Progress bar visual
-                LinearProgressIndicator(
+                const LinearProgressIndicator(
                   value: 0.7,
-                  backgroundColor: const Color(0xFFE0E0E0),
-                  color: const Color(0xFF42A886),
+                  backgroundColor: Color(0xFFE0E0E0),
+                  color: Color(0xFF42A886),
                   minHeight: 8,
                 ),
                 const SizedBox(height: 8),
@@ -536,6 +439,31 @@ class _OnboardingPage2 extends StatelessWidget {
           _buildFeaturePreview(
             'Category Filtering',
             'Organize by product type: smartphones, laptops, appliances, etc.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturePreview(String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: Color(0xFF42A886),
+            size: 16,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$title: $description',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF8291A0),
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -614,6 +542,31 @@ class _OnboardingPage3 extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildFeaturePreview(String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: Color(0xFF42A886),
+            size: 16,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$title: $description',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF8291A0),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Page 4: Notification introduction (optional)
@@ -621,11 +574,13 @@ class _OnboardingPage4 extends StatelessWidget {
   final VoidCallback onSkip;
   final VoidCallback onProceed;
   final bool notificationsExplained;
+  final VoidCallback onEnableNotifications;
 
   const _OnboardingPage4({
     required this.onSkip,
     required this.onProceed,
     required this.notificationsExplained,
+    required this.onEnableNotifications,
   });
 
   @override
@@ -672,7 +627,6 @@ class _OnboardingPage4 extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-          // Conditional content based on whether notifications were already explained
           if (!notificationsExplained) ...[
             const Text(
               'We do not request notification permission immediately on launch.',
@@ -682,8 +636,6 @@ class _OnboardingPage4 extends StatelessWidget {
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.visible,
             ),
             const SizedBox(height: 16),
             const Text(
@@ -696,15 +648,9 @@ class _OnboardingPage4 extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            // Enable notifications button
             ElevatedButton.icon(
-              onPressed: () {
-                // Mark as explained and proceed
-                // The actual permission request will happen in Settings
-                _onEnableNotifications();
-              },
-              icon: const Icon(Icons.notifications_active,
-                  color: Colors.white),
+              onPressed: onEnableNotifications,
+              icon: const Icon(Icons.notifications_active, color: Colors.white),
               label: const Text('Enable Reminders'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF315C81),
@@ -733,17 +679,6 @@ class _OnboardingPage4 extends StatelessWidget {
       ),
     );
   }
-
-  /// Called when user enables notifications
-  void _onEnableNotifications() {
-    // In a real implementation, this would request notification permission
-    // For now, just mark as explained and proceed
-    if (!mounted) return;
-    setState(() {
-      _notificationsExplained = true;
-    });
-    context.go('/dashboard');
-  }
 }
 
 /// Page 5: Final call to action / get started
@@ -751,77 +686,47 @@ class _OnboardingPage5 extends StatelessWidget {
   final VoidCallback onSkip;
   final VoidCallback onProceed;
   final bool notificationsExplained;
+  final VoidCallback onEnableNotifications;
 
   const _OnboardingPage5({
     required this.onSkip,
     required this.onProceed,
     required this.notificationsExplained,
+    required this.onEnableNotifications,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Summary of key benefits
-        _buildBenefitItem(
-          'Organize All Products',
-          'Add and manage all your products in one place.',
-        ),
-        _buildBenefitItem(
-          'Auto Expiration',
-          'Never forget a warranty expiration date again.',
-        ),
-        _buildBenefitItem(
-          'Local Privacy',
-          'Your data stays on your device, always.',
-        ),
-        _buildBenefitItem(
-          'Optional Reminders',
-          'Get notified before warranties expire.',
-        ),
-        const Spacer(),
-        // Get Started button - full width
-        ElevatedButton(
-          onPressed: () async {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setBool('has_seen_onboarding', true);
-            if (!mounted) return;
-            context.go('/dashboard');
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF315C81),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildBenefitItem(
+            'Organize All Products',
+            'Add and manage all your products in one place.',
           ),
-          child: const Text(
-            'Get Started',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          _buildBenefitItem(
+            'Auto Expiration',
+            'Never forget a warranty expiration date again.',
           ),
-        ),
-        const SizedBox(height: 16),
-        // Skip option at bottom
-        TextButton(
-          onPressed: _onSkip,
-          child: const Text(
-            'Skip',
-            style: TextStyle(
-              color: Color(0xFF6E91AE),
-              fontWeight: FontWeight.w500,
-            ),
+          _buildBenefitItem(
+            'Local Privacy',
+            'Your data stays on your device, always.',
           ),
-        ),
-      ],
+          _buildBenefitItem(
+            'Optional Reminders',
+            'Get notified before warranties expire.',
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildBenefitItem(String title, String description) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      Row(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
