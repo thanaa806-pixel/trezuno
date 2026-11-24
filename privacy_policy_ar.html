@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>سياسة خصوصية تريزونو</title>
+    <style>
+        :root {
+            --primary: #315C81;
+            --secondary: #6E91AE;
+            --accent: #E9B86E;
+            --background-light: #F5F7FA;
+            --surface-light: #FFFFFF;
+            --background-dark: #111923;
+            --surface-dark: #1B2734;
+            --primary-text: #182635;
+            --secondary-text: #8291A0;
+            --success: #42A886;
+            --warning: #E8A64D;
+            --danger: #D96B6B;
+            --border-light: #DEE4E8;
+            --border-dark: #303946;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--primary-text);
+            background-color: var(--background-light);
+            margin: 0;
+            padding: 0;
+            direction: rtl;
+        }
+
+        .ltr body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            direction: ltr;
+        }
+
+        .rtl body {
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--secondary-text);
+            font-size: 16px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            color: var(--primary);
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        ul {
+            margin-right: 20px;
+        }
+
+        li {
+            margin-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            background-color: var(--surface-light);
+            font-weight: 600;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .feature-item {
+            background: var(--surface-light);
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .callout {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            margin-top: 60px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border-light);
+            color: var(--secondary-text);
+            font-size: 14px;
+        }
+
+        a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: var(--primary);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 10px;
+            }
+
+            .header {
+                margin-bottom: 40px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+
+        a:focus, button:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div class="logo">ت</div>
+            <h1>تريزونو</h1>
+            <p class="subtitle">لا تفوت Tracking الضمانات بعد الآن</p>
+        </div>
+
+        <!-- معلومات مخزنة -->
+        <section class="section">
+            <h2 class="section-title">المعلومات المخزنة</h2>
+            <ul>
+                <li>أسماء المنتجات</li>
+                <li>تواريخ الشراء</li>
+                <li>مدة الضمان</li>
+                <li>تواريخ انتهاء الضمان</li>
+                <li>أسماء المتاجر</li>
+                <li>أرقام السلاسل</li>
+                <li>أرقام الفواتير</li>
+                <li>وصف المنتج</li>
+                <li>ملاحظات إضافية</li>
+                <li>صور المنتجات</li>
+                <li>صور الفواتير</li>
+            </ul>
+        </section>
+
+        <!-- كيفية استخدام المعلومات -->
+        <section class="section">
+            <h2 class="section-title">كيفية استخدام المعلومات</h2>
+            <p>تُستخدم المعلومات المخزنة في Trezuno للأغراض التالية فقط:</p>
+            <ul>
+                <li>حساب تواريخ انتهاء الضمان</li>
+                <li>إرسال تذكيرات محلية (إذا تم تمكينها)</li>
+                <li>تنظيم المنتجات في القائمة</li>
+                <li>تقديم تجربة مستخدم محسنة</li>
+            </ul>
+        </section>
+
+        <!-- تخزين البيانات المحلي -->
+        <section class="section">
+            <h2 class="section-title">تخزين البيانات المحلي</h2>
+            <p>جميع بيانات Trezuno مخزنة محليًا على جهازك فقط:</p>
+            <ul>
+                <li>لا يتم transmitted البيانات إلى أي خوادم خارجية</li>
+                <li>لا يتم تخزين البيانات في السحابة</li>
+                <li>لا يتم مشاركة البيانات مع أطراف ثالثة</li>
+                <li>يمكن للمستخدم حذف جميع البيانات في أي وقت</li>
+            </ul>
+        </section>
+
+        <!-- صور المنتجات والفواتير -->
+        <section class="section">
+            <h2 class="section-title">صور المنتجات والفواتير</h2>
+            <p>يمكن للمستخدم إضافة صور للمنتجات والفواتير:</p>
+            <ul>
+                <li>تُخزن الصور محليًا على الجهاز</li>
+                <li>لا يتم upoad الصور إلى أي خوادم</li>
+                <li>يمكن للمستخدم حذف الصور في أي وقت</li>
+                <li>يمكن الوصول إلى الصور فقط من داخل التطبيق</li>
+            </ul>
+        </section>
+
+        <!-- التذكيرات -->
+        <section class="section">
+            <h2 class="section-title">التذكيرات</h2>
+            <pيمكن تمكين تنبيهات محلية قبل انتهاء الضمان:</p>
+            <ul>
+                <li>يمكن للمستخدم اختيار متى يريد التنبيه (30، 14، 7، أو 1 يوم)</li>
+                <li>لا يتم إرسال تنبيهات دون موافقة المستخدم</li>
+                <li>يمكن تعطيل التنبيهات في أي وقت من الإعدادات</li>
+                <li>التطبيق لا يستخدم خدمات الإشعارات البعيدة</li>
+            </ul>
+        </section>
+
+        <!-- خدمات الأطراف الثالثة -->
+        <section class="section">
+            <h2 class="section-title">خدمات الأطراف الثالثة</h2>
+            <p>لا تستخدم تريزونو أي خدمات خارجية:</p>
+            <ul>
+                <li>لا إعلانات</li>
+                <li>لا تتبع</li>
+                <li>لا تحليلات</li>
+                <li>لا تسجيل دخول</li>
+                <li>لا مزامنة سحابية</li>
+            </ul>
+        </section>
+
+        <!-- احتفاظ البيانات -->
+        <section class="section">
+            <h2 class="section-title">احتفاظ البيانات</h2>
+            <p>تُحتفظ بيانات Trezuno حتى يحذفها المستخدم:</p>
+            <ul>
+                <li>تبقى البيانات بعد إعادة تشغيل التطبيق</li>
+                <li>يمكن حذف جميع البيانات في أي وقت من الإعدادات</li>
+                <li>يتم تنبيه المستخدم قبل الحذف الشامل</li>
+            </ul>
+        </section>
+
+        <!-- حقوق المستخدم -->
+        <section class="section">
+            <h2 class="section-title">حقوق المستخدم</h2>
+            <p>يحصل المستخدم على الحقوق التالية:</p>
+            <ul>
+                <li>حق الوصول إلى بياناته</li>
+                <li>حق تصحيح المعلومات</li>
+                <li>حق حذف جميع البيانات</li>
+                <li>حق إيقاف المعالجة</li>
+                <li>حق الاعتراض على المعالجة</li>
+            </ul>
+        </section>
+
+        <div class="callout">
+            <strong>آخر تحديث:</strong> نوفمبر 2026<br>
+            <strong>اتصال:</strong> دعم من خلال إعدادات التطبيق
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2026 Trezuno. جميع الحقوق محفوظة.</p>
+            <p>سياسة الخصوصية | شروط الخدمة</p>
+        </div>
+    </div>
+
+</body>
+</html>

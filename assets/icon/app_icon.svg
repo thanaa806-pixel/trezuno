@@ -1,0 +1,28 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#315C81;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6E91AE;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D96B6B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E9B86E;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="512" fill="url(#gradient1)"/>
+  
+  <!-- Abstract document icon path -->
+  <path d="M512 160L384 352Q320 416 352 512Q384 608 512 608Q640 608 672 512Q704 416 736 352L608 160Q544 224 512 320Q480 224 448 160L512 160ZM512 832Q397 832 320 736Q320 640 352 544Q384 448 512 448Q644 448 672 512Q672 592 512 832Z" fill="#FFFFFF" opacity="0.9"/>
+  
+  <!-- Time indicator element -->
+  <path d="M512 256C394.83 256 320 350.83 320 468Q320 585.17 394.83 680H659.17C733.17 680 808 585.17 808 468Q808 350.83 733.17 256H512ZM512 704C377.36 704 288 614.88 288 468Q288 321.12 377.36 231.04Q466.68 140.96 512 140.96Q557.32 140.96 606.64 149.08Q655.96 157.2 696 191.84Q737.04 212.72 760 248Q760 264 756 280Q752 304 736 328Q720 352 696 368Q672 384 616 384Q560 384 512 332.19Q512 328 512 328Q456 352 416 384Q360 384 304 368Q280 352 256 328Q256 280 256 264Q256 248 256 212.72Q297.04 191.84 338.08 157.2Q387.4 149.08 436.72 140.96Q482.36 140.96 528 140.96Q574.32 140.96 615.36 191.84Q656.36 212.72 679 248Q679 264 675 280Q671 304 655.36 328Q639.68 352 616 384Q560.36 384 512 384Z" fill="#E9B86E" opacity="0.9"/>
+  
+  <!-- Document lines detail -->
+  <g opacity="0.3">
+    <line x1="448" y1="320" x2="576" y2="320" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="448" y1="360" x2="576" y2="360" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="448" y1="400" x2="576" y2="400" stroke="#FFFFFF" stroke-width="1"/>
+  </g>
+</svg>
