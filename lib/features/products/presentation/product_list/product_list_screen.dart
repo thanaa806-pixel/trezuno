@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:trezuno/features/products/domain/product_model.dart';
-import 'package:trezuno/core/router/app_router.dart';
 import 'package:trezuno/core/theme/app_colors.dart';
 import 'package:trezuno/core/theme/app_typography.dart';
+import 'package:trezuno/core/constants/app_constants.dart';
 
-/// Products Screen - displays all saved products.
-///
-/// Features:
-/// - List and grid presentation
-/// - Search products
-/// - Filter by warranty status
-/// - Filter by category
-/// - Sort by expiration date
-/// - Sort by purchase date
-/// - Empty states
+/// Professional Products Screen - displays all saved products with filter chips & search.
 class ProductsScreen extends StatefulWidget {
   static const routeName = '/products';
 
@@ -29,14 +21,18 @@ class _ProductsScreenState extends State<ProductsScreen>
     with SingleTickerProviderStateMixin {
   late TextEditingController _searchController;
   String _searchQuery = '';
-  String? _selectedFilter;
-  String? _selectedSort;
+  String _selectedCategory = 'All';
+  String _selectedSort = 'expiration';
   late AnimationController _animationController;
   late Animation<double> _fadeInAnimation;
 
-  // Sample products for demonstration
   late final List<Product> _allProducts;
-  late final List<Product> _filteredProducts;
+  List<Product> _filteredProducts = [];
+
+  final List<String> _categories = [
+    'All',
+    ...AppConstants.productCategories,
+  ];
 
   @override
   void initState() {
@@ -46,10 +42,11 @@ class _ProductsScreenState extends State<ProductsScreen>
       duration: const Duration(milliseconds: 600),
     );
     _fadeInAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _searchController = TextEditingController();
-    _initializeProducts();
+    _allProducts = Product.sampleProducts();
+    _filterProducts();
     _animationController.forward();
   }
 
@@ -60,49 +57,27 @@ class _ProductsScreenState extends State<ProductsScreen>
     super.dispose();
   }
 
-  /// Initialize sample products for demonstration
-  void _initializeProducts() {
-    _allProducts = Product.sampleProducts();
-    _filteredProducts = List.from(_allProducts);
-  }
-
-  /// Filter and sort the products list based on current selections
-  void _applyFiltersAndSort() {
+  void _filterProducts() {
     setState(() {
-      _filteredProducts = List.from(_allProducts);
+      _filteredProducts = _allProducts.where((product) {
+        final matchesSearch = _searchQuery.isEmpty ||
+            product.productName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            (product.storeName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+            (product.category?.toLowerCase() ?? '').contains(_searchQuery.toLowerCase());
 
-      // Apply search filter
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        _filteredProducts = _filteredProducts.where((product) {
-          return product.productName.toLowerCase().contains(query) ||
-              (product.notes?.toLowerCase().contains(query) ?? false) ||
-              (product.storeName?.toLowerCase().contains(query) ?? false) ||
-              (product.serialNumber?.toLowerCase().contains(query) ?? false);
-        }).toList();
-      }
+        final matchesCategory = _selectedCategory == 'All' || product.category == _selectedCategory;
 
-      // Apply category filter
-      if (_selectedFilter != null) {
-        _filteredProducts = _filteredProducts.where((product) {
-          return product.category == _selectedFilter ||
-              _selectedFilter == 'All';
-        }).toList();
-      }
+        return matchesSearch && matchesCategory;
+      }).toList();
 
-      // Apply sorting
+      // Sort
       _filteredProducts.sort((a, b) {
-        switch (_selectedSort) {
-          case 'expiration':
-            return a.remainingDays!.compareTo(b.remainingDays!);
-          case 'purchase':
-            return a.purchaseDate.compareTo(b.purchaseDate);
-          case 'name':
-            return a.productName.compareTo(b.productName);
-          case 'status':
-            return a.warrantyStatus.compareTo(b.warrantyStatus);
-          default:
-            return 0;
+        if (_selectedSort == 'expiration') {
+          return a.remainingDays.compareTo(b.remainingDays);
+        } else if (_selectedSort == 'name') {
+          return a.productName.compareTo(b.productName);
+        } else {
+          return b.purchaseDate.compareTo(a.purchaseDate);
         }
       });
     });
@@ -110,387 +85,287 @@ class _ProductsScreenState extends State<ProductsScreen>
 
   @override
   Widget build(BuildContext context) {
-    _applyFiltersAndSort();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: _buildAppBar(context),
+      appBar: AppBar(
+        title: const Text('My Products'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list_rounded),
+            tooltip: 'Sort Options',
+            onPressed: _showSortBottomSheet,
+          ),
+        ],
+      ),
       body: AnimatedBuilder(
         animation: _fadeInAnimation,
         builder: (context, child) => FadeTransition(
           opacity: _fadeInAnimation,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search and filters header
-                  _buildSearchAndFilters(),
-
-                  const SizedBox(height: 24),
-
-                  // Products list
-                  _buildProductsList(),
-
-                  const Spacer(),
-
-                  // Floating action button for adding product
-                  _buildFab(),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      floatingActionButton: _buildFab(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    );
-  }
-
-  /// Build the app bar with title and filters
-  AppBar _buildAppBar(BuildContext context) {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      foregroundColor: const Color(0xFF182635),
-      title: const Text('Products'),
-      actions: [
-        // Add button
-        IconButton(
-          icon: const Icon(Icons.add),
-          tooltip: 'Add Product',
-          onPressed: () => context.go('/products/add'),
-        ),
-      ],
-    );
-  }
-
-  /// Build the search and filters bar
-  Widget _buildSearchAndFilters() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Search field
-        TextField(
-          controller: _searchController,
-          onChanged: (query) {
-            setState(() {
-              _searchQuery = query;
-              _applyFiltersAndSort();
-            });
-          },
-          decoration: InputDecoration(
-            hintText: 'Search products...',
-            prefixIcon: const Icon(Icons.search),
-            filled: true,
-            fillColor: const Color(0xFFF5F7FA),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Filters row
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+          child: Column(
             children: [
-              // Category filter button
-              _FilterButton(
-                isSelected: _selectedFilter == null || _selectedFilter == 'All',
-                label: 'All',
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedFilter = selected ? null : 'All';
-                    _applyFiltersAndSort();
-                  });
-                },
+              // Search Bar & Filters
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (val) {
+                        setState(() {
+                          _searchQuery = val;
+                          _filterProducts();
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search products, stores, serials...',
+                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                    _filterProducts();
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    // Category Horizontal Chips
+                    SizedBox(
+                      height: 42,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _categories.length,
+                        itemBuilder: (context, index) {
+                          final category = _categories[index];
+                          final isSelected = _selectedCategory == category;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(category),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = category;
+                                  _filterProducts();
+                                });
+                              },
+                              selectedColor: AppColors.primary,
+                              labelStyle: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.w600,
+                                color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                              ),
+                              backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: isSelected ? AppColors.primary : AppColors.borderLight,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8),
-
-              // Status filter buttons
-              _FilterButton(
-                isSelected: _selectedFilter == 'Expiring Soon',
-                label: 'Expiring',
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedFilter = selected ? 'Expiring Soon' : null;
-                    _applyFiltersAndSort();
-                  });
-                },
+              const SizedBox(height: 8),
+              // Product Count Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Showing ${_filteredProducts.length} items',
+                      style: AppTypography.bodySmall.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _showSortBottomSheet,
+                      icon: const Icon(Icons.sort_rounded, size: 16),
+                      label: Text(
+                        _selectedSort == 'expiration'
+                            ? 'Sort: Expiration'
+                            : _selectedSort == 'name'
+                                ? 'Sort: Name'
+                                : 'Sort: Newest',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8),
-
-              _FilterButton(
-                isSelected: _selectedFilter == 'Expired',
-                label: 'Expired',
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedFilter = selected ? 'Expired' : null;
-                    _applyFiltersAndSort();
-                  });
-                },
+              const SizedBox(height: 8),
+              // Products List
+              Expanded(
+                child: _filteredProducts.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        itemCount: _filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = _filteredProducts[index];
+                          return _buildProductCard(context, product, isDark);
+                        },
+                      ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-
-        // Sort dropdown
-        DropdownButtonFormField<String>(
-          initialValue: _selectedSort,
-          decoration: InputDecoration(
-            hintText: 'Sort by',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          items: const [
-            DropdownMenuItem(value: 'name', child: Text('Name')),
-            DropdownMenuItem(value: 'expiration', child: Text('Expiration')),
-            DropdownMenuItem(value: 'purchase', child: Text('Purchase Date')),
-            DropdownMenuItem(value: 'status', child: Text('Status')),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedSort = value;
-              _applyFiltersAndSort();
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  /// Build the products list view
-  Widget _buildProductsList() {
-    if (_filteredProducts.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section title
-        const Text(
-          'My Products',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF182635),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Grid view of products
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisExtent: 140,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          itemCount: _filteredProducts.length,
-          itemBuilder: (context, index) {
-            final product = _filteredProducts[index];
-            return _ProductCard(product: product);
-          },
-        ),
-      ],
-    );
-  }
-
-  /// Build empty state when no products match the filters
-  Widget _buildEmptyState() {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 40),
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5F0),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF42A886).withValues(alpha: 0.3),
-        ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.inventory_outlined,
-            size: 48,
-            color: Color(0xFF42A886),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No products yet',
-            style: AppTypography.titleMedium.copyWith(
-              color: const Color(0xFF315C81),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add your first product to get started',
-            style: AppTypography.bodyMedium.copyWith(
-              color: const Color(0xFF6E91AE),
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => context.go('/products/add'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF315C81),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 44),
-            ),
-            child: const Text('Add First Product'),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.go('/add-product'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add_rounded),
+      ),
+    );
+  }
+
+  Widget _buildProductCard(BuildContext context, Product product, bool isDark) {
+    final statusColor = product.warrantyStatus == 'Active'
+        ? AppColors.success
+        : product.warrantyStatus == 'Expiring Soon'
+            ? AppColors.warning
+            : AppColors.danger;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-    );
-  }
-
-  /// Build the floating action button
-  Widget _buildFab() {
-    return FloatingActionButton(
-      onPressed: () => context.go('/products/add'),
-      backgroundColor: const Color(0xFF315C81),
-      foregroundColor: Colors.white,
-      child: const Icon(Icons.add),
-    );
-  }
-}
-
-/// Filter chip/button widget
-class _FilterButton extends StatefulWidget {
-  final String label;
-  final bool isSelected;
-  final ValueChanged<bool> onSelected;
-
-  const _FilterButton({
-    required this.label,
-    required this.isSelected,
-    required this.onSelected,
-  });
-
-  @override
-  State<_FilterButton> createState() => _FilterButtonState();
-}
-
-class _FilterButtonState extends State<_FilterButton> {
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(
-        widget.label,
-        style: TextStyle(
-          color: widget.isSelected
-              ? const Color(0xFF315C81)
-              : const Color(0xFF8291A0),
-          fontWeight: widget.isSelected ? FontWeight.w500 : FontWeight.normal,
-        ),
-      ),
-      selected: widget.isSelected,
-      onSelected: widget.onSelected,
-      backgroundColor: const Color(0xFFF5F7FA),
-      checkmarkColor: const Color(0xFF315C81),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    );
-  }
-}
-
-/// Product card widget
-class _ProductCard extends StatelessWidget {
-  final Product product;
-
-  const _ProductCard({required this.product});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product name
-            Text(
-              product.productName,
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w500,
-                overflow: TextOverflow.ellipsis,
-              ),
-              maxLines: 1,
-            ),
-            const SizedBox(height: 8),
-
-            // Warranty status
-            Row(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: () => context.go('/product-details/${product.id}'),
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  width: 54,
+                  height: 54,
                   decoration: BoxDecoration(
-                    color: _getStatusColor().withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.devices_rounded,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.productName,
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${product.category ?? "Electronics"} • ${product.storeName ?? "Store"}',
+                        style: AppTypography.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.timer_outlined, size: 14, color: statusColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            product.remainingDays > 0
+                                ? '${product.remainingDays} days remaining'
+                                : 'Warranty Expired',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: statusColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     product.warrantyStatus,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: _getStatusColor(),
-                      fontWeight: FontWeight.w500,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
                     ),
-                  ),
-                ),
-                const Spacer(),
-                // Expiration days
-                Text(
-                  '${product.remainingDays}d',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: const Color(0xFF8291A0),
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: const Duration(milliseconds: 300)).slideY(begin: 0.05, end: 0);
+  }
 
-            const Spacer(),
-
-            // Product details
-            Row(
-              children: [
-                // Category chip
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE9B86E).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    product.category ?? 'Other',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: const Color(0xFFE9B86E),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                // More info arrow
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 12,
-                  color: const Color(0xFF78909C),
-                ),
-              ],
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.search_off_rounded, size: 64, color: AppColors.secondary),
+            const SizedBox(height: 16),
+            Text(
+              'No products found',
+              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try changing your search or category filter.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium,
             ),
           ],
         ),
@@ -498,32 +373,58 @@ class _ProductCard extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor() {
-    switch (product.warrantyStatus) {
-      case 'Active':
-        return const Color(0xFF42A886);
-      case 'Expiring Soon':
-        return const Color(0xFFE8A64D);
-      case 'Expired':
-        return const Color(0xFFD96B6B);
-      default:
-        return const Color(0xFF8291A0);
-    }
-  }
-}
-
-/// Extension on Product list for sample data
-extension ProductExtensions on List<Product> {
-  /// Creates a list of sample products for demonstration.
-  static List<Product> sampleProducts(int count) {
-    final categories = ['Smartphones', 'Laptops', 'Tablets', 'TVs', 'Appliances'];
-    final now = DateTime.now();
-
-    return List.generate(count, (index) => Product(
-      productName: 'Product ${index + 1}',
-      category: categories[index % categories.length],
-      purchaseDate: now.subtract(Duration(days: index * 30)),
-      warrantyDurationMonths: 12 + (index % 6) * 6,
-    ));
+  void _showSortBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sort Products',
+                style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.timer_outlined, color: AppColors.primary),
+                title: const Text('Warranty Expiration'),
+                trailing: _selectedSort == 'expiration' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                onTap: () {
+                  setState(() => _selectedSort = 'expiration');
+                  _filterProducts();
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.sort_by_alpha_rounded, color: AppColors.primary),
+                title: const Text('Product Name'),
+                trailing: _selectedSort == 'name' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                onTap: () {
+                  setState(() => _selectedSort = 'name');
+                  _filterProducts();
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_today_rounded, color: AppColors.primary),
+                title: const Text('Purchase Date (Newest)'),
+                trailing: _selectedSort == 'newest' ? const Icon(Icons.check, color: AppColors.primary) : null,
+                onTap: () {
+                  setState(() => _selectedSort = 'newest');
+                  _filterProducts();
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

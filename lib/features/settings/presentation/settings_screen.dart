@@ -6,7 +6,7 @@ import 'package:trezuno/core/constants/app_constants.dart';
 import 'package:trezuno/core/theme/app_colors.dart';
 import 'package:trezuno/core/theme/app_typography.dart';
 
-/// Settings Screen for Trezuno application.
+/// World-class Professional Settings Screen for Trezuno.
 class SettingsScreen extends StatefulWidget {
   static const routeName = '/settings';
 
@@ -20,7 +20,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   String _selectedLanguage = 'en';
   String _selectedTheme = 'system';
-  List<int> _reminderDays = [30, 14, 7, 1];
   bool _isLoading = true;
 
   static const _keyNotifications = 'notifications_enabled';
@@ -75,32 +74,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/dashboard'),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildSectionHeader('Preferences'),
-          _buildThemeCard(),
-          const SizedBox(height: 12),
-          _buildLanguageCard(),
+          _buildSectionHeader('Appearance & Display'),
+          _buildThemeCard(isDark),
+          const SizedBox(height: 16),
+          _buildLanguageCard(isDark),
           const SizedBox(height: 24),
-          _buildSectionHeader('Notifications'),
-          _buildNotificationCard(),
+          _buildSectionHeader('Notifications & Alerts'),
+          _buildNotificationCard(isDark),
           const SizedBox(height: 24),
           _buildSectionHeader('About & Privacy'),
-          _buildPrivacyCard(),
-          const SizedBox(height: 12),
-          _buildAboutCard(),
+          _buildPrivacyCard(isDark),
+          const SizedBox(height: 16),
+          _buildAboutCard(isDark),
           const SizedBox(height: 24),
           _buildSectionHeader('Data Management'),
-          _buildDangerZoneCard(),
+          _buildDangerZoneCard(isDark),
           const SizedBox(height: 40),
         ],
       ),
@@ -109,242 +110,207 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+      padding: const EdgeInsets.only(bottom: 10, left: 4, right: 4),
       child: Text(
         title,
         style: AppTypography.titleSmall.copyWith(
           color: AppColors.secondary,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  Widget _buildThemeCard() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.palette_outlined, color: AppColors.primary),
-                const SizedBox(width: 12),
-                Text(
-                  'Theme Mode',
-                  style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'light', label: Text('Light'), icon: Icon(Icons.light_mode)),
-                ButtonSegment(value: 'system', label: Text('System'), icon: Icon(Icons.brightness_auto)),
-                ButtonSegment(value: 'dark', label: Text('Dark'), icon: Icon(Icons.dark_mode)),
-              ],
-              selected: {_selectedTheme},
-              onSelectionChanged: (set) => _updateTheme(set.first),
-            ),
-          ],
-        ),
+  Widget _buildThemeCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
-    );
-  }
-
-  Widget _buildLanguageCard() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.language, color: AppColors.primary),
-                const SizedBox(width: 12),
-                Text(
-                  'Language',
-                  style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            DropdownButton<String>(
-              value: _selectedLanguage,
-              underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: 'en', child: Text('English (US)')),
-                DropdownMenuItem(value: 'ar', child: Text('العربية')),
-              ],
-              onChanged: (val) {
-                if (val != null) _updateLanguage(val);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationCard() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                'Warranty Expiration Alerts',
-                style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                'Receive reminders before your warranties expire',
-                style: AppTypography.bodySmall.copyWith(color: AppColors.secondaryText),
-              ),
-              value: _notificationsEnabled,
-              activeColor: AppColors.primary,
-              onChanged: _updateNotifications,
-            ),
-            if (_notificationsEnabled) ...[
-              const Divider(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Reminder intervals',
-                    style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    '${_reminderDays.join(', ')} days before',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.primary),
-                  ),
-                ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.palette_outlined, color: AppColors.primary),
+              const SizedBox(width: 14),
+              Text(
+                'Theme Mode',
+                style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'light', label: Text('Light'), icon: Icon(Icons.light_mode_rounded)),
+              ButtonSegment(value: 'system', label: Text('System'), icon: Icon(Icons.brightness_auto_rounded)),
+              ButtonSegment(value: 'dark', label: Text('Dark'), icon: Icon(Icons.dark_mode_rounded)),
+            ],
+            selected: {_selectedTheme},
+            onSelectionChanged: (set) => _updateTheme(set.first),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPrivacyCard() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  Widget _buildLanguageCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.language_rounded, color: AppColors.primary),
+              const SizedBox(width: 14),
+              Text(
+                'Language',
+                style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'en', label: Text('English')),
+              ButtonSegment(value: 'ar', label: Text('العربية')),
+            ],
+            selected: {_selectedLanguage},
+            onSelectionChanged: (set) => _updateLanguage(set.first),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+      ),
+      child: SwitchListTile(
+        title: Text(
+          'Warranty Expiration Reminders',
+          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+        ),
+        subtitle: const Text('Receive push alerts before warranties expire.'),
+        secondary: const Icon(Icons.notifications_active_outlined, color: AppColors.primary),
+        value: _notificationsEnabled,
+        onChanged: _updateNotifications,
+      ),
+    );
+  }
+
+  Widget _buildPrivacyCard(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+      ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         leading: const Icon(Icons.privacy_tip_outlined, color: AppColors.primary),
         title: Text(
           'Privacy Policy',
-          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),
+          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(
-          'Read our offline data policy',
-          style: AppTypography.bodySmall.copyWith(color: AppColors.secondaryText),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        subtitle: const Text('Read how Trezuno protects your data.'),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
         onTap: () => context.go('/privacy-policy'),
       ),
     );
   }
 
-  Widget _buildAboutCard() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(Icons.info_outline, color: AppColors.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Trezuno Warranty Tracker',
-                    style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Version ${AppConstants.version} (Build ${AppConstants.buildNumber})',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.secondaryText),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+  Widget _buildAboutCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
-    );
-  }
-
-  Widget _buildDangerZoneCard() {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: const Icon(Icons.delete_outline, color: AppColors.danger),
-        title: Text(
-          'Clear All Data',
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.danger,
-          ),
-        ),
-        subtitle: Text(
-          'Permanently remove all products and receipts',
-          style: AppTypography.bodySmall.copyWith(color: AppColors.secondaryText),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.danger),
-        onTap: _showClearDataConfirmation,
-      ),
-    );
-  }
-
-  Future<void> _showClearDataConfirmation() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Data?'),
-        content: const Text(
-          'This will permanently delete all your stored warranties and attached receipts from this device. This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 28),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppConstants.appName,
+                  style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Version ${AppConstants.version} (Build ${AppConstants.buildNumber})',
+                  style: AppTypography.bodySmall,
+                ),
+              ],
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete Everything'),
           ),
         ],
       ),
     );
+  }
 
-    if (confirmed == true && mounted) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All data has been reset successfully.'),
-          backgroundColor: AppColors.primary,
+  Widget _buildDangerZoneCard(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.danger.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: const Icon(Icons.delete_forever_rounded, color: AppColors.danger),
+        title: Text(
+          'Reset All Data',
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.danger,
+          ),
         ),
-      );
-    }
+        subtitle: const Text('Clear all saved products and preferences.'),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Reset All Data'),
+              content: const Text('Are you sure you want to delete all data? This action cannot be undone.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('All data successfully reset.')),
+                    );
+                  },
+                  child: const Text('Reset'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
