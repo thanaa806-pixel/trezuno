@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:trezuno/core/constants/app_constants.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
-/// Light theme for Trezuno.
+/// World-class, professional theme for Trezuno, optimized for iOS App Store.
 ThemeData get lightTheme {
   return ThemeData(
     useMaterial3: true,
@@ -13,10 +12,10 @@ ThemeData get lightTheme {
       secondary: AppColors.secondary,
       surface: AppColors.surfaceLight,
       error: AppColors.danger,
-      onPrimary: AppColors.primaryText,
-      onSecondary: AppColors.primaryText,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
       onSurface: AppColors.primaryText,
-      onError: AppColors.primaryText,
+      onError: Colors.white,
     ),
     textTheme: AppTypography.lightTextTheme,
     scaffoldBackgroundColor: AppColors.backgroundLight,
@@ -25,15 +24,31 @@ ThemeData get lightTheme {
       foregroundColor: AppColors.primaryText,
       elevation: 0,
       centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontFamily: 'Cairo',
+        fontWeight: FontWeight.w700,
+        fontSize: 18,
+        color: AppColors.primaryText,
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: AppColors.surfaceLight,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderLight, width: 1),
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.primaryText,
+        foregroundColor: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
+          borderRadius: BorderRadius.circular(14),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         textStyle: const TextStyle(
           fontFamily: 'Inter',
           fontWeight: FontWeight.w600,
@@ -46,7 +61,7 @@ ThemeData get lightTheme {
         foregroundColor: AppColors.primary,
         textStyle: const TextStyle(
           fontFamily: 'Inter',
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           fontSize: 14,
         ),
       ),
@@ -54,26 +69,31 @@ ThemeData get lightTheme {
     inputDecorationTheme: InputDecorationTheme(
       hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.secondaryText),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
-        borderSide: const BorderSide(color: AppColors.borderLight),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.borderLight, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
-        borderSide: const BorderSide(color: AppColors.borderLight),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.borderLight, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1),
+      ),
       filled: true,
-      fillColor: AppColors.surfaceLight,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
     ),
     iconTheme: const IconThemeData(color: AppColors.primaryText),
     dividerColor: AppColors.divider,
   );
 }
 
-/// Dark theme for Trezuno.
+/// World-class dark theme for Trezuno, optimized for iOS App Store.
 ThemeData get darkTheme {
   return ThemeData(
     useMaterial3: true,
@@ -83,27 +103,44 @@ ThemeData get darkTheme {
       secondary: AppColors.secondary,
       surface: AppColors.surfaceDark,
       error: AppColors.danger,
-      onPrimary: AppColors.surfaceLight,
-      onSecondary: AppColors.surfaceLight,
-      onSurface: AppColors.surfaceLight,
-      onError: AppColors.surfaceLight,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
+      onSurface: Colors.white,
+      onError: Colors.white,
     ),
     textTheme: AppTypography.darkTextTheme,
     scaffoldBackgroundColor: AppColors.backgroundDark,
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
-      foregroundColor: AppColors.primaryText,
+      foregroundColor: Colors.white,
       elevation: 0,
-      iconTheme: IconThemeData(color: AppColors.primaryText),
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontFamily: 'Cairo',
+        fontWeight: FontWeight.w700,
+        fontSize: 18,
+        color: Colors.white,
+      ),
+      iconTheme: IconThemeData(color: Colors.white),
+    ),
+    cardTheme: CardThemeData(
+      color: AppColors.surfaceDark,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderDark, width: 1),
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.primaryText,
+        foregroundColor: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
+          borderRadius: BorderRadius.circular(14),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         textStyle: const TextStyle(
           fontFamily: 'Inter',
           fontWeight: FontWeight.w600,
@@ -113,10 +150,10 @@ ThemeData get darkTheme {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: AppColors.primary,
+        foregroundColor: AppColors.accent,
         textStyle: const TextStyle(
           fontFamily: 'Inter',
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           fontSize: 14,
         ),
       ),
@@ -124,21 +161,26 @@ ThemeData get darkTheme {
     inputDecorationTheme: InputDecorationTheme(
       hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.secondaryText),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
-        borderSide: const BorderSide(color: AppColors.borderDark),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.borderDark, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
-        borderSide: const BorderSide(color: AppColors.borderDark),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.borderDark, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppConstants.cornerRadius),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1),
       ),
       filled: true,
       fillColor: AppColors.surfaceDark,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
     ),
-    iconTheme: const IconThemeData(color: AppColors.primaryText),
+    iconTheme: const IconThemeData(color: Colors.white),
     dividerColor: AppColors.borderDark,
   );
 }
