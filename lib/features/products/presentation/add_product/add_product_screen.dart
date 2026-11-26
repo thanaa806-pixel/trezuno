@@ -3,17 +3,19 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:trezuno/features/products/domain/product_model.dart';
-import 'package:trezuno/core/router/app_router.dart';
 import 'package:trezuno/core/theme/app_colors.dart';
 import 'package:trezuno/core/theme/app_typography.dart';
+import 'package:trezuno/core/widgets/app_button.dart';
+import 'package:trezuno/core/widgets/app_text_field.dart';
 
-/// Add Product Screen for Trezuno application.
+/// World-class Professional Add / Edit Product Screen for Trezuno.
 class AddProductScreen extends StatefulWidget {
   static const routeName = '/products/add';
 
-  final Product? existingProduct; // For editing existing product
+  final Product? existingProduct;
 
   const AddProductScreen({
     super.key,
@@ -26,29 +28,23 @@ class AddProductScreen extends StatefulWidget {
 
 class _AddProductScreenState extends State<AddProductScreen>
     with SingleTickerProviderStateMixin {
-  // Form key for validation
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers for text fields
   final _productNameController = TextEditingController();
+  final _storeNameController = TextEditingController();
   final _serialNumberController = TextEditingController();
-  final _receiptNumberController = TextEditingController();
   final _notesController = TextEditingController();
 
-  // Animation controller
   late AnimationController _animationController;
 
-  // State values
   String? _selectedCategory;
-  DateTime? _selectedPurchaseDate;
+  DateTime _selectedPurchaseDate = DateTime.now();
   int _selectedWarrantyMonths = 12;
   bool _isSaving = false;
 
-  // Image paths
   File? _productImageFile;
   File? _receiptImageFile;
 
-  // Available categories
   final List<String> _categories = [
     'Smartphones',
     'Laptops',
@@ -60,7 +56,6 @@ class _AddProductScreenState extends State<AddProductScreen>
     'Other',
   ];
 
-  // Warranty duration options (in months)
   final List<int> _warrantyOptions = [3, 6, 12, 24, 36, 48];
 
   @override
@@ -68,63 +63,50 @@ class _AddProductScreenState extends State<AddProductScreen>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 600),
     )..forward();
 
-    // Initialize with existing product data if provided
     if (widget.existingProduct != null) {
-      final product = widget.existingProduct!;
-      _productNameController.text = product.productName;
-      _serialNumberController.text = product.serialNumber ?? '';
-      _receiptNumberController.text = product.receiptImage != null ? 'Receipt attached' : '';
-      _notesController.text = product.notes ?? '';
-      _selectedCategory = product.category;
-      _selectedPurchaseDate = product.purchaseDate;
-      _selectedWarrantyMonths = product.warrantyDurationMonths;
-      _productImageFile = product.productImage != null
-          ? File(product.productImage!)
-          : null;
-      _receiptImageFile = product.receiptImage != null
-          ? File(product.receiptImage!)
-          : null;
+      final p = widget.existingProduct!;
+      _productNameController.text = p.productName;
+      _storeNameController.text = p.storeName ?? '';
+      _serialNumberController.text = p.serialNumber ?? '';
+      _notesController.text = p.notes ?? '';
+      _selectedCategory = p.category;
+      _selectedPurchaseDate = p.purchaseDate;
+      _selectedWarrantyMonths = p.warrantyDurationMonths;
+      if (p.productImage != null) _productImageFile = File(p.productImage!);
+      if (p.receiptImage != null) _receiptImageFile = File(p.receiptImage!);
     }
   }
 
   @override
   void dispose() {
     _productNameController.dispose();
+    _storeNameController.dispose();
     _serialNumberController.dispose();
-    _receiptNumberController.dispose();
     _notesController.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
-  /// Save the product (either new or updated)
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-    });
+    setState(() => _isSaving = true);
 
     try {
       final product = Product(
         id: widget.existingProduct?.id,
         productName: _productNameController.text.trim(),
-        category: _selectedCategory,
-        purchaseDate: _selectedPurchaseDate ?? DateTime.now(),
+        category: _selectedCategory ?? 'Electronics',
+        purchaseDate: _selectedPurchaseDate,
         warrantyDurationMonths: _selectedWarrantyMonths,
-        notes: _notesController.text.trim().isNotEmpty
-            ? _notesController.text.trim()
-            : null,
-        storeName: null,
-        serialNumber: _serialNumberController.text.trim().isNotEmpty
-            ? _serialNumberController.text.trim()
-            : null,
-        description: null,
+        notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+        storeName: _storeNameController.text.trim().isNotEmpty ? _storeNameController.text.trim() : null,
+        serialNumber: _serialNumberController.text.trim().isNotEmpty ? _serialNumberController.text.trim() : null,
         receiptImage: _receiptImageFile?.path,
         productImage: _productImageFile?.path,
       );
@@ -134,479 +116,333 @@ class _AddProductScreenState extends State<AddProductScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving product: $e'),
-          backgroundColor: const Color(0xFFD96B6B),
-        ),
+        SnackBar(content: Text('Error saving product: $e'), backgroundColor: AppColors.danger),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  /// Pick product image from gallery
   Future<void> _pickProductImage() async {
-    final pickedImage =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedImage != null) {
-      setState(() {
-        _productImageFile = File(pickedImage.path);
-      });
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _productImageFile = File(picked.path));
     }
   }
 
-  /// Pick receipt image from gallery
   Future<void> _pickReceiptImage() async {
-    final pickedImage =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedImage != null) {
-      setState(() {
-        _receiptImageFile = File(pickedImage.path);
-        _receiptNumberController.text = 'Receipt attached';
-      });
-    }
-  }
-
-  /// Show warranty duration options bottom sheet
-  Future<void> _showWarrantyDurationBottomSheet() async {
-    final result = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Warranty Duration',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF182635),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ..._warrantyOptions.map((months) => _WarrantyOption(
-                months: months,
-                isSelected: _selectedWarrantyMonths == months,
-                onTap: () => Navigator.pop(context, months),
-              )),
-              const SizedBox(height: 24),
-              TextButton(
-                onPressed: () => Navigator.pop(context, _warrantyOptions.last + 1),
-                child: const Text('Custom duration'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        _selectedWarrantyMonths = result;
-      });
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _receiptImageFile = File(picked.path));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existingProduct != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
 
     return Scaffold(
-      appBar: _buildAppBar(context, isEditing),
-      body: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) => FadeTransition(
-          opacity: _animationController,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(isEditing),
-                    const SizedBox(height: 32),
-                    _buildProductNameField(),
-                    const SizedBox(height: 20),
-                    _buildCategoryDropdown(),
-                    const SizedBox(height: 20),
-                    _buildPurchaseDateField(),
-                    const SizedBox(height: 20),
-                    _buildWarrantyDurationField(),
-                    const SizedBox(height: 20),
-                    _buildSerialNumberField(),
-                    const SizedBox(height: 20),
-                    _buildReceiptNumberField(),
-                    const SizedBox(height: 20),
-                    _buildNotesField(),
-                    const SizedBox(height: 32),
-                    _buildSaveAndCancelButtons(isEditing),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  AppBar _buildAppBar(BuildContext context, bool isEditing) {
-    return AppBar(
-      title: Text(
-        isEditing ? 'Edit Product' : 'Add Product',
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.go('/products'),
-      ),
-      actions: [
-        TextButton(
+      appBar: AppBar(
+        title: Text(isEditing ? 'Edit Warranty' : 'Add New Warranty'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/products'),
-          child: const Text('Cancel'),
         ),
-      ],
-    );
+      ),
+      body: FadeTransition(
+        opacity: _animationController,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image Picker Card
+                _buildImagePickerCard(isDark, surfaceColor),
+                const SizedBox(height: 24),
+
+                // Section: Product Information
+                Text(
+                  'Product Details',
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                  ),
+                  child: Column(
+                    children: [
+                      AppTextField(
+                        label: 'Product Name*',
+                        hintText: 'e.g., iPhone 15 Pro, MacBook Pro',
+                        controller: _productNameController,
+                        prefixIcon: const Icon(Icons.devices_rounded, color: AppColors.primary),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Product name is required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      // Category Dropdown
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Category*',
+                            style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: _selectedCategory,
+                            dropdownColor: surfaceColor,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Select category',
+                              prefixIcon: const Icon(Icons.category_rounded, color: AppColors.primary),
+                              filled: true,
+                              fillColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                              ),
+                            ),
+                            items: _categories.map((cat) {
+                              return DropdownMenuItem(
+                                value: cat,
+                                child: Text(cat, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setState(() => _selectedCategory = val),
+                            validator: (val) => val == null ? 'Please select a category' : null,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      AppTextField(
+                        label: 'Store / Merchant',
+                        hintText: 'e.g., Apple Store, Amazon',
+                        controller: _storeNameController,
+                        prefixIcon: const Icon(Icons.store_rounded, color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 16),
+                      AppTextField(
+                        label: 'Serial Number',
+                        hintText: 'e.g., SN-99882234',
+                        controller: _serialNumberController,
+                        prefixIcon: const Icon(Icons.confirmation_number_rounded, color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Section: Warranty Information
+                Text(
+                  'Warranty & Purchase',
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                  ),
+                  child: Column(
+                    children: [
+                      // Purchase Date Picker Field
+                      GestureDetector(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedPurchaseDate,
+                            firstDate: DateTime(2015),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) setState(() => _selectedPurchaseDate = picked);
+                        },
+                        child: AbsorbPointer(
+                          child: AppTextField(
+                            label: 'Purchase Date*',
+                            hintText: '${_selectedPurchaseDate.toLocal()}'.split(' ')[0],
+                            controller: TextEditingController(
+                              text: '${_selectedPurchaseDate.toLocal()}'.split(' ')[0],
+                            ),
+                            prefixIcon: const Icon(Icons.calendar_today_rounded, color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Warranty Duration selector
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Warranty Duration',
+                            style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _warrantyOptions.map((months) {
+                              final isSelected = _selectedWarrantyMonths == months;
+                              return ChoiceChip(
+                                label: Text('$months Months'),
+                                selected: isSelected,
+                                onSelected: (_) => setState(() => _selectedWarrantyMonths = months),
+                                selectedColor: AppColors.primary,
+                                labelStyle: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                ),
+                                backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Section: Receipt & Notes
+                Text(
+                  'Receipt & Notes',
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                  ),
+                  child: Column(
+                    children: [
+                      // Receipt image upload
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _receiptImageFile != null ? 'Receipt Attached ✓' : 'Attach Receipt / Invoice',
+                              style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _pickReceiptImage,
+                            icon: const Icon(Icons.upload_file_rounded, size: 18),
+                            label: Text(_receiptImageFile != null ? 'Change' : 'Upload'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      AppTextField(
+                        label: 'Additional Notes',
+                        hintText: 'Add store warranty details or remarks...',
+                        controller: _notesController,
+                        maxLines: 3,
+                        prefixIcon: const Icon(Icons.note_alt_rounded, color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Action Buttons
+                AppButton(
+                  title: isEditing ? 'Update Warranty' : 'Save Warranty',
+                  isLoading: _isSaving,
+                  onPressed: _saveProduct,
+                ),
+                const SizedBox(height: 16),
+                AppButton(
+                  title: 'Cancel',
+                  isOutlined: true,
+                  onPressed: () => context.go('/products'),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: const Duration(milliseconds: 400));
   }
 
-  Widget _buildHeader(bool isEditing) {
-    return Column(
-      children: [
-        _buildProductImagePreview(),
-        const SizedBox(height: 16),
-        ElevatedButton.icon(
-          onPressed: _pickProductImage,
-          icon: const Icon(Icons.photo_library),
-          label: Text(
-            _productImageFile == null ? 'Add Product Image' : 'Change Image',
-          ),
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 44),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProductImagePreview() {
-    if (_productImageFile != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          _productImageFile!,
-          height: 150,
-          width: double.infinity,
-          fit: BoxFit.cover,
-        ),
-      );
-    }
-
+  Widget _buildImagePickerCard(bool isDark, Color surfaceColor) {
     return Container(
-      height: 150,
       width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFDEE4E8),
-        borderRadius: BorderRadius.circular(12),
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
-      child: const Center(
-        child: Text(
-          'No image selected',
-          style: TextStyle(
-            color: Color(0xFF78909C),
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductNameField() {
-    return TextFormField(
-      controller: _productNameController,
-      decoration: const InputDecoration(
-        labelText: 'Product Name*',
-        hintText: 'e.g., iPhone 15 Pro',
-        prefixIcon: Icon(Icons.inventory_2),
-        filled: true,
-        fillColor: Color(0xFFF5F7FA),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
-      validator: (value) {
-        if (value == null || value.trim().isEmpty) {
-          return 'Product name is required';
-        }
-        if (value.trim().length < 2) {
-          return 'Product name must be at least 2 characters';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildCategoryDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedCategory,
-      decoration: const InputDecoration(
-        labelText: 'Product Category*',
-        hintText: 'Select a category',
-        prefixIcon: Icon(Icons.category),
-        filled: true,
-        fillColor: Color(0xFFF5F7FA),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
-      items: _categories.map((String category) {
-        return DropdownMenuItem<String>(
-          value: category,
-          child: Text(category),
-        );
-      }).toList(),
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedCategory = newValue;
-        });
-      },
-      validator: (value) {
-        if (value == null) {
-          return 'Please select a category';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildPurchaseDateField() {
-    return GestureDetector(
-      onTap: _selectPurchaseDate,
-      child: AbsorbPointer(
-        child: TextFormField(
-          readOnly: true,
-          controller: TextEditingController(
-            text: _selectedPurchaseDate == null
-                ? ''
-                : '${_selectedPurchaseDate!.year}-${_selectedPurchaseDate!.month.toString().padLeft(2, '0')}-${_selectedPurchaseDate!.day.toString().padLeft(2, '0')}',
-          ),
-          decoration: const InputDecoration(
-            labelText: 'Purchase Date*',
-            hintText: 'Select purchase date',
-            prefixIcon: Icon(Icons.calendar_today),
-            filled: true,
-            fillColor: Color(0xFFF5F7FA),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-          validator: (value) {
-            if (_selectedPurchaseDate == null) {
-              return 'Please select a purchase date';
-            }
-            return null;
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<void> _selectPurchaseDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedPurchaseDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && mounted) {
-      setState(() {
-        _selectedPurchaseDate = picked;
-      });
-    }
-  }
-
-  Widget _buildWarrantyDurationField() {
-    return GestureDetector(
-      onTap: _showWarrantyDurationBottomSheet,
-      child: AbsorbPointer(
-        child: TextFormField(
-          readOnly: true,
-          controller: TextEditingController(
-            text: '$_selectedWarrantyMonths months',
-          ),
-          decoration: const InputDecoration(
-            labelText: 'Warranty Duration*',
-            hintText: 'e.g., 12 months',
-            prefixIcon: Icon(Icons.timelapse),
-            filled: true,
-            fillColor: Color(0xFFF5F7FA),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSerialNumberField() {
-    return TextFormField(
-      controller: _serialNumberController,
-      decoration: const InputDecoration(
-        labelText: 'Serial Number',
-        hintText: 'e.g., SN123456789',
-        prefixIcon: Icon(Icons.numbers),
-        filled: true,
-        fillColor: Color(0xFFF5F7FA),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
-    );
-  }
-
-  Widget _buildReceiptNumberField() {
-    return TextFormField(
-      controller: _receiptNumberController,
-      decoration: InputDecoration(
-        labelText: 'Receipt Number',
-        hintText: 'e.g., RECEIPT123',
-        prefixIcon: const Icon(Icons.receipt),
-        filled: true,
-        fillColor: const Color(0xFFF5F7FA),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.camera_alt),
-          onPressed: _pickReceiptImage,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotesField() {
-    return TextFormField(
-      controller: _notesController,
-      decoration: const InputDecoration(
-        labelText: 'Additional Notes',
-        hintText: 'Any additional information about the product',
-        prefixIcon: Icon(Icons.note),
-        filled: true,
-        fillColor: Color(0xFFF5F7FA),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        isDense: true,
-        alignLabelWithHint: true,
-      ),
-      maxLines: 3,
-    );
-  }
-
-  Widget _buildSaveAndCancelButtons(bool isEditing) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextButton(
-            onPressed: () => context.go('/products'),
-            child: const Text('Cancel'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _isSaving ? null : _saveProduct,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF315C81),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            child: _isSaving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: _productImageFile != null
+                ? Image.file(
+                    _productImageFile!,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                   )
-                : const Text('Save Product'),
+                : Container(
+                    height: 160,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add_a_photo_outlined, size: 40, color: AppColors.secondary),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap to add product photo',
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.secondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _WarrantyOption extends StatelessWidget {
-  final int months;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _WarrantyOption({
-    required this.months,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Text(
-              '$months months',
-              style: TextStyle(
-                color: isSelected ? const Color(0xFF315C81) : const Color(0xFF8291A0),
-                fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
-              ),
-            ),
-            const Spacer(),
-            if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: Color(0xFF42A886),
-              ),
-          ],
-        ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _pickProductImage,
+            icon: const Icon(Icons.photo_library_rounded),
+            label: Text(_productImageFile == null ? 'Select Product Photo' : 'Change Photo'),
+          ),
+        ],
       ),
     );
   }
