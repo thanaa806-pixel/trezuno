@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../products/domain/product_model.dart';
+import '../../products/data/product_repository.dart';
 
 /// World-class Professional Dashboard Screen for Trezuno application.
 class DashboardScreen extends StatefulWidget {
@@ -23,7 +24,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _activeWarranties = 0;
   int _expiringSoon = 0;
   int _expiredWarranties = 0;
-  late List<Product> _recentProducts;
+  List<Product> _recentProducts = [];
+  bool _isLoading = true;
   late AnimationController _animationController;
   late Animation<double> _fadeInAnimation;
 
@@ -38,7 +40,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _loadDashboardData();
-    _animationController.forward();
   }
 
   @override
@@ -47,13 +48,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
-  void _loadDashboardData() {
-    final samples = Product.sampleProducts();
-    _recentProducts = samples;
-    _totalProducts = samples.length;
-    _activeWarranties = samples.where((p) => p.warrantyStatus == 'Active').length;
-    _expiringSoon = samples.where((p) => p.warrantyStatus == 'Expiring Soon').length;
-    _expiredWarranties = samples.where((p) => p.warrantyStatus == 'Expired').length;
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+    final products = await ProductRepository.instance.getProducts();
+    if (mounted) {
+      setState(() {
+        _recentProducts = products;
+        _totalProducts = products.length;
+        _activeWarranties = products.where((p) => p.warrantyStatus == 'Active').length;
+        _expiringSoon = products.where((p) => p.warrantyStatus == 'Expiring Soon').length;
+        _expiredWarranties = products.where((p) => p.warrantyStatus == 'Expired').length;
+        _isLoading = false;
+      });
+      _animationController.forward();
+    }
   }
 
   @override
@@ -63,43 +71,43 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Scaffold(
       appBar: _buildAppBar(context),
-      body: AnimatedBuilder(
-        animation: _fadeInAnimation,
-        builder: (context, child) => FadeTransition(
-          opacity: _fadeInAnimation,
-          child: RefreshIndicator(
-            onRefresh: () async {
-              setState(() {
-                _loadDashboardData();
-              });
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Greeting & Profile Banner
-                  _buildWelcomeBanner(context, isDark),
-                  const SizedBox(height: 24),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : AnimatedBuilder(
+              animation: _fadeInAnimation,
+              builder: (context, child) => FadeTransition(
+                opacity: _fadeInAnimation,
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await _loadDashboardData();
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Greeting & Profile Banner
+                        _buildWelcomeBanner(context, isDark),
+                        const SizedBox(height: 24),
 
-                  // Summary Statistics Grid
-                  _buildSummaryGrid(context, isDark),
-                  const SizedBox(height: 28),
+                        // Summary Statistics Grid
+                        _buildSummaryGrid(context, isDark),
+                        const SizedBox(height: 28),
 
-                  // Quick Navigation Action Bar
-                  _buildQuickActionBar(context),
-                  const SizedBox(height: 32),
+                        // Quick Navigation Action Bar
+                        _buildQuickActionBar(context),
+                        const SizedBox(height: 32),
 
-                  // Recently Added Products Section
-                  _buildRecentlyAddedSection(context, isDark),
-                  const SizedBox(height: 40),
-                ],
+                        // Recently Added Products Section
+                        _buildRecentlyAddedSection(context, isDark),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/add-product'),
         backgroundColor: AppColors.primary,

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:trezuno/features/products/domain/product_model.dart';
+import 'package:trezuno/features/products/data/product_repository.dart';
 import 'package:trezuno/core/theme/app_colors.dart';
 import 'package:trezuno/core/theme/app_typography.dart';
 import 'package:trezuno/core/widgets/app_button.dart';
@@ -110,6 +111,9 @@ class _AddProductScreenState extends State<AddProductScreen>
         receiptImage: _receiptImageFile?.path,
         productImage: _productImageFile?.path,
       );
+
+      // Persist to local repository
+      await ProductRepository.instance.saveProduct(product);
 
       if (!mounted) return;
       context.go('/products');

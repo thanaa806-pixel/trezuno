@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:trezuno/features/products/domain/product_model.dart';
+import 'package:trezuno/features/products/data/product_repository.dart';
 import 'package:trezuno/core/theme/app_colors.dart';
 import 'package:trezuno/core/theme/app_typography.dart';
 import 'package:trezuno/core/constants/app_constants.dart';
@@ -26,8 +27,9 @@ class _ProductsScreenState extends State<ProductsScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeInAnimation;
 
-  late final List<Product> _allProducts;
+  List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
+  bool _isLoading = true;
 
   final List<String> _categories = [
     'All',
@@ -45,9 +47,20 @@ class _ProductsScreenState extends State<ProductsScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _searchController = TextEditingController();
-    _allProducts = Product.sampleProducts();
-    _filterProducts();
-    _animationController.forward();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() => _isLoading = true);
+    final products = await ProductRepository.instance.getProducts();
+    if (mounted) {
+      setState(() {
+        _allProducts = products;
+        _filterProducts();
+        _isLoading = false;
+      });
+      _animationController.forward();
+    }
   }
 
   @override
@@ -58,28 +71,26 @@ class _ProductsScreenState extends State<ProductsScreen>
   }
 
   void _filterProducts() {
-    setState(() {
-      _filteredProducts = _allProducts.where((product) {
-        final matchesSearch = _searchQuery.isEmpty ||
-            product.productName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            (product.storeName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
-            (product.category?.toLowerCase() ?? '').contains(_searchQuery.toLowerCase());
+    _filteredProducts = _allProducts.where((product) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          product.productName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (product.storeName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+          (product.category?.toLowerCase() ?? '').contains(_searchQuery.toLowerCase());
 
-        final matchesCategory = _selectedCategory == 'All' || product.category == _selectedCategory;
+      final matchesCategory = _selectedCategory == 'All' || product.category == _selectedCategory;
 
-        return matchesSearch && matchesCategory;
-      }).toList();
+      return matchesSearch && matchesCategory;
+    }).toList();
 
-      // Sort
-      _filteredProducts.sort((a, b) {
-        if (_selectedSort == 'expiration') {
-          return a.remainingDays.compareTo(b.remainingDays);
-        } else if (_selectedSort == 'name') {
-          return a.productName.compareTo(b.productName);
-        } else {
-          return b.purchaseDate.compareTo(a.purchaseDate);
-        }
-      });
+    // Sort
+    _filteredProducts.sort((a, b) {
+      if (_selectedSort == 'expiration') {
+        return a.remainingDays.compareTo(b.remainingDays);
+      } else if (_selectedSort == 'name') {
+        return a.productName.compareTo(b.productName);
+      } else {
+        return b.purchaseDate.compareTo(a.purchaseDate);
+      }
     });
   }
 
@@ -102,131 +113,133 @@ class _ProductsScreenState extends State<ProductsScreen>
           ),
         ],
       ),
-      body: AnimatedBuilder(
-        animation: _fadeInAnimation,
-        builder: (context, child) => FadeTransition(
-          opacity: _fadeInAnimation,
-          child: Column(
-            children: [
-              // Search Bar & Filters
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : AnimatedBuilder(
+              animation: _fadeInAnimation,
+              builder: (context, child) => FadeTransition(
+                opacity: _fadeInAnimation,
                 child: Column(
                   children: [
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val;
-                          _filterProducts();
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search products, stores, serials...',
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear_rounded),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _searchQuery = '';
-                                    _filterProducts();
-                                  });
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    // Category Horizontal Chips
-                    SizedBox(
-                      height: 42,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _categories.length,
-                        itemBuilder: (context, index) {
-                          final category = _categories[index];
-                          final isSelected = _selectedCategory == category;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(category),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  _selectedCategory = category;
-                                  _filterProducts();
-                                });
-                              },
-                              selectedColor: AppColors.primary,
-                              labelStyle: TextStyle(
-                                fontFamily: 'Cairo',
-                                fontWeight: FontWeight.w600,
-                                color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
-                              ),
-                              backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: isSelected ? AppColors.primary : AppColors.borderLight,
-                                ),
-                              ),
+                    // Search Bar & Filters
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _searchController,
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val;
+                                _filterProducts();
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Search products, stores, serials...',
+                              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear_rounded),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _searchQuery = '';
+                                          _filterProducts();
+                                        });
+                                      },
+                                    )
+                                  : null,
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 14),
+                          // Category Horizontal Chips
+                          SizedBox(
+                            height: 42,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _categories.length,
+                              itemBuilder: (context, index) {
+                                final category = _categories[index];
+                                final isSelected = _selectedCategory == category;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ChoiceChip(
+                                    label: Text(category),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        _selectedCategory = category;
+                                        _filterProducts();
+                                      });
+                                    },
+                                    selectedColor: AppColors.primary,
+                                    labelStyle: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                    backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color: isSelected ? AppColors.primary : AppColors.borderLight,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Product Count Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Showing ${_filteredProducts.length} items',
+                            style: AppTypography.bodySmall.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: _showSortBottomSheet,
+                            icon: const Icon(Icons.sort_rounded, size: 16),
+                            label: Text(
+                              _selectedSort == 'expiration'
+                                  ? 'Sort: Expiration'
+                                  : _selectedSort == 'name'
+                                      ? 'Sort: Name'
+                                      : 'Sort: Newest',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Products List
+                    Expanded(
+                      child: _filteredProducts.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              itemCount: _filteredProducts.length,
+                              itemBuilder: (context, index) {
+                                final product = _filteredProducts[index];
+                                return _buildProductCard(context, product, isDark);
+                              },
+                            ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              // Product Count Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Showing ${_filteredProducts.length} items',
-                      style: AppTypography.bodySmall.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.secondary,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _showSortBottomSheet,
-                      icon: const Icon(Icons.sort_rounded, size: 16),
-                      label: Text(
-                        _selectedSort == 'expiration'
-                            ? 'Sort: Expiration'
-                            : _selectedSort == 'name'
-                                ? 'Sort: Name'
-                                : 'Sort: Newest',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Products List
-              Expanded(
-                child: _filteredProducts.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        itemCount: _filteredProducts.length,
-                        itemBuilder: (context, index) {
-                          final product = _filteredProducts[index];
-                          return _buildProductCard(context, product, isDark);
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.go('/add-product'),
         backgroundColor: AppColors.primary,
